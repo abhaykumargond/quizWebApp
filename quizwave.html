@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuizWave</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 800px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        nav {
+            display: flex;
+            background-color: #4a90e2;
+        }
+
+        nav button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            background: transparent;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        nav button:hover {
+            background-color: #357abd;
+        }
+
+        nav button.active {
+            background-color: #357abd;
+            font-weight: bold;
+        }
+
+        main {
+            padding: 20px;
+        }
+
+        h1, h2 {
+            color: #4a90e2;
+            border-bottom: 2px solid #f0f2f5;
+            padding-bottom: 10px;
+        }
+
+        input[type="text"], input[type="password"], select {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            background-color: #4a90e2;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #357abd;
+        }
+
+        #admin-dashboard h2 {
+            margin-top: 30px;
+        }
+
+        #questions-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        #questions-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #f0f2f5;
+        }
+
+        #questions-list li:last-child {
+            border-bottom: none;
+        }
+
+        #quiz-area, #result-container {
+            text-align: center;
+        }
+
+        #timer {
+            font-size: 18px;
+            font-weight: bold;
+            color: #e94e77;
+            margin-bottom: 20px;
+        }
+
+        #options-list {
+            list-style: none;
+            padding: 0;
+            margin: 20px 0;
+        }
+
+        #options-list li {
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        #options-list li:hover {
+            background-color: #f0f2f5;
+            border-color: #4a90e2;
+        }
+
+        #feedback {
+            margin-top: 20px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        #start-quiz-btn, #restart-quiz-btn {
+            font-size: 18px;
+            padding: 15px 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <nav>
+            <button id="user-view-btn" class="active">Quiz</button>
+            <button id="admin-view-btn">Admin</button>
+        </nav>
+
+        <main id="main-content">
+            <div id="user-panel">
+                <div id="quiz-container">
+                    <button id="start-quiz-btn">Start Quiz</button>
+                    <div id="quiz-area" style="display:none;">
+                        <div id="timer">Time Left: 30s</div>
+                        <h2 id="question-text"></h2>
+                        <ul id="options-list"></ul>
+                        <div id="feedback"></div>
+                    </div>
+                </div>
+                <div id="result-container" style="display:none;">
+                    <h2>Quiz Finished!</h2>
+                    <p>Your score: <span id="final-score"></span></p>
+                    <button id="restart-quiz-btn">Restart Quiz</button>
+                </div>
+            </div>
+
+            <div id="admin-panel" style="display:none;">
+                <h1>Admin Panel</h1>
+                <div id="admin-login">
+                    <input type="password" id="admin-password" placeholder="Enter admin password">
+                    <button id="admin-login-btn">Login</button>
+                </div>
+                <div id="admin-dashboard" style="display:none;">
+                    <h2>Add New Question</h2>
+                    <form id="add-question-form">
+                        <input type="text" id="question-input" placeholder="Question" required>
+                        <input type="text" id="option1-input" placeholder="Option 1" required>
+                        <input type="text" id="option2-input" placeholder="Option 2" required>
+                        <input type="text" id="option3-input" placeholder="Option 3" required>
+                        <input type="text" id="option4-input" placeholder="Option 4" required>
+                        <select id="correct-answer-select" required>
+                            <option value="0">Option 1</option>
+                            <option value="1">Option 2</option>
+                            <option value="2">Option 3</option>
+                            <option value="3">Option 4</option>
+                        </select>
+                        <button type="submit">Add Question</button>
+                    </form>
+
+                    <h2>Existing Questions</h2>
+                    <ul id="questions-list"></ul>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const userViewBtn = document.getElementById('user-view-btn');
+            const adminViewBtn = document.getElementById('admin-view-btn');
+            const userPanel = document.getElementById('user-panel');
+            const adminPanel = document.getElementById('admin-panel');
+
+            userViewBtn.addEventListener('click', () => {
+                userPanel.style.display = 'block';
+                adminPanel.style.display = 'none';
+                userViewBtn.classList.add('active');
+                adminViewBtn.classList.remove('active');
+            });
+
+            adminViewBtn.addEventListener('click', () => {
+                userPanel.style.display = 'none';
+                adminPanel.style.display = 'block';
+                adminViewBtn.classList.add('active');
+                userViewBtn.classList.remove('active');
+            });
+
+            const adminPasswordInput = document.getElementById('admin-password');
+            const adminLoginBtn = document.getElementById('admin-login-btn');
+            const adminLogin = document.getElementById('admin-login');
+            const adminDashboard = document.getElementById('admin-dashboard');
+
+            adminLoginBtn.addEventListener('click', () => {
+                if (adminPasswordInput.value === 'admin123') {
+                    adminLogin.style.display = 'none';
+                    adminDashboard.style.display = 'block';
+                    loadQuizData();
+                    renderQuestions();
+                } else {
+                    alert('Incorrect password');
+                }
+            });
+
+            const addQuestionForm = document.getElementById('add-question-form');
+            const questionsList = document.getElementById('questions-list');
+            let quizData = [];
+
+            function saveQuizData() {
+                localStorage.setItem('quizData', JSON.stringify(quizData));
+            }
+
+            function loadQuizData() {
+                const data = localStorage.getItem('quizData');
+                if (data) {
+                    quizData = JSON.parse(data);
+                }
+            }
+
+            function renderQuestions() {
+                questionsList.innerHTML = '';
+                quizData.forEach((q, index) => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <span>${q.question}</span>
+                        <div>
+                            <button class="edit-btn" data-index="${index}">Edit</button>
+                            <button class="delete-btn" data-index="${index}">Delete</button>
+                        </div>
+                    `;
+                    questionsList.appendChild(li);
+                });
+            }
+
+            addQuestionForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const newQuestion = {
+                    question: document.getElementById('question-input').value,
+                    options: [
+                        document.getElementById('option1-input').value,
+                        document.getElementById('option2-input').value,
+                        document.getElementById('option3-input').value,
+                        document.getElementById('option4-input').value,
+                    ],
+                    correctAnswer: parseInt(document.getElementById('correct-answer-select').value)
+                };
+                quizData.push(newQuestion);
+                saveQuizData();
+                renderQuestions();
+                addQuestionForm.reset();
+            });
+
+            questionsList.addEventListener('click', (e) => {
+                if (e.target.classList.contains('delete-btn')) {
+                    const index = parseInt(e.target.dataset.index);
+                    quizData.splice(index, 1);
+                    saveQuizData();
+                    renderQuestions();
+                } else if (e.target.classList.contains('edit-btn')) {
+                    const index = parseInt(e.target.dataset.index);
+                    const question = quizData[index];
+                    document.getElementById('question-input').value = question.question;
+                    document.getElementById('option1-input').value = question.options[0];
+                    document.getElementById('option2-input').value = question.options[1];
+                    document.getElementById('option3-input').value = question.options[2];
+                    document.getElementById('option4-input').value = question.options[3];
+                    document.getElementById('correct-answer-select').value = question.correctAnswer;
+                    quizData.splice(index, 1);
+                    saveQuizData();
+                    renderQuestions();
+                }
+            });
+
+            // User Panel Logic
+            const startQuizBtn = document.getElementById('start-quiz-btn');
+            const quizContainer = document.getElementById('quiz-container');
+            const quizArea = document.getElementById('quiz-area');
+            const resultContainer = document.getElementById('result-container');
+            const questionText = document.getElementById('question-text');
+            const optionsList = document.getElementById('options-list');
+            const feedback = document.getElementById('feedback');
+            const timerDisplay = document.getElementById('timer');
+            const finalScore = document.getElementById('final-score');
+            const restartQuizBtn = document.getElementById('restart-quiz-btn');
+
+            let currentQuestionIndex = 0;
+            let score = 0;
+            let timer;
+            let timerId;
+
+            function startQuiz() {
+                loadQuizData(); // Make sure we have the latest questions
+                if (quizData.length === 0) {
+                    alert('No questions available. Please ask the admin to add some.');
+                    return;
+                }
+                currentQuestionIndex = 0;
+                score = 0;
+                startQuizBtn.style.display = 'none';
+                resultContainer.style.display = 'none';
+                quizArea.style.display = 'block';
+                loadQuestion();
+            }
+
+            function loadQuestion() {
+                if (currentQuestionIndex >= quizData.length) {
+                    endQuiz();
+                    return;
+                }
+
+                clearTimeout(timerId);
+                const currentQuestion = quizData[currentQuestionIndex];
+                questionText.textContent = currentQuestion.question;
+                optionsList.innerHTML = '';
+                feedback.textContent = '';
+
+                currentQuestion.options.forEach((option, index) => {
+                    const li = document.createElement('li');
+                    li.textContent = option;
+                    li.addEventListener('click', () => selectAnswer(index));
+                    optionsList.appendChild(li);
+                });
+
+                startTimer();
+            }
+
+            function startTimer() {
+                timer = 30;
+                timerDisplay.textContent = `Time Left: ${timer}s`;
+                timerId = setInterval(() => {
+                    timer--;
+                    timerDisplay.textContent = `Time Left: ${timer}s`;
+                    if (timer <= 0) {
+                        selectAnswer(-1); // Times up, treat as wrong answer
+                    }
+                }, 1000);
+            }
+
+            function selectAnswer(selectedIndex) {
+                clearTimeout(timerId);
+                const currentQuestion = quizData[currentQuestionIndex];
+                if (selectedIndex === currentQuestion.correctAnswer) {
+                    score++;
+                    feedback.textContent = 'Correct!';
+                    feedback.style.color = 'green';
+                } else {
+                    feedback.textContent = 'Wrong!';
+                    feedback.style.color = 'red';
+                }
+
+                setTimeout(() => {
+                    currentQuestionIndex++;
+                    loadQuestion();
+                }, 1000); // Wait 1 second before loading next question
+            }
+
+            function endQuiz() {
+                quizArea.style.display = 'none';
+                resultContainer.style.display = 'block';
+                finalScore.textContent = `${score} / ${quizData.length}`;
+            }
+
+            function restartQuiz() {
+                resultContainer.style.display = 'none';
+                startQuizBtn.style.display = 'block';
+            }
+
+            startQuizBtn.addEventListener('click', startQuiz);
+            restartQuizBtn.addEventListener('click', restartQuiz);
+        });
+    </script>
+</body>
+</html>
